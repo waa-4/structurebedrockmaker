@@ -1,0 +1,62 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>Bedrock Structure Spawner Pack Builder</title>
+  <style>
+    body { font-family: system-ui, sans-serif; max-width: 900px; margin: 24px auto; padding: 0 16px; }
+    .drop { border: 2px dashed #888; border-radius: 12px; padding: 24px; text-align: center; }
+    .row { display: flex; gap: 12px; flex-wrap: wrap; }
+    label { display:block; font-size: 14px; margin: 10px 0 4px; }
+    input, select { padding: 8px; border-radius: 8px; border: 1px solid #bbb; }
+    button { padding: 10px 14px; border-radius: 10px; border: 0; cursor: pointer; }
+    table { width: 100%; border-collapse: collapse; margin-top: 16px; }
+    th, td { border-bottom: 1px solid #eee; padding: 10px; text-align: left; }
+    small { color: #666; }
+  </style>
+</head>
+<body>
+  <h1>Bedrock Structure Spawner Pack Builder</h1>
+  <p><small>Drop .mcstructure files, set spawn rules, download a Behavior Pack zip.</small></p>
+
+  <div class="drop" id="drop">
+    <p><b>Drag & drop</b> your <code>.mcstructure</code> files here</p>
+    <p>or</p>
+    <input id="fileInput" type="file" multiple accept=".mcstructure" />
+  </div>
+
+  <h2>Pack Settings</h2>
+  <div class="row">
+    <div>
+      <label>Pack Name</label>
+      <input id="packName" value="My Structure Spawner Pack" />
+    </div>
+    <div>
+      <label>Namespace</label>
+      <input id="namespace" value="custom" />
+    </div>
+  </div>
+
+  <h2>Structures</h2>
+  <table id="table">
+    <thead>
+      <tr>
+        <th>File</th>
+        <th>Identifier</th>
+        <th>Biome Filter</th>
+        <th>Scatter Chance (1 in N)</th>
+        <th>Rotation</th>
+      </tr>
+    </thead>
+    <tbody></tbody>
+  </table>
+
+  <p>
+    <button id="buildBtn">Build & Download ZIP</button>
+  </p>
+
+  <!-- JSZip from CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
+  <script src="app.js"></script>
+</body>
+</html>
