@@ -1,10 +1,8 @@
-/* Bedrock Structure Spawner Pack Builder
-   - Static (GitHub Pages friendly)
-   - Drag/drop .mcstructure files
-   - Per-structure rules
-   - Outputs .mcpack or .zip
-
-   If something breaks: open DevTools (F12) → Console.
+/* Working Bedrock structure worldgen pack builder.
+   Outputs correct folders:
+   - structures/
+   - features/
+   - feature_rules/
 */
 
 const drop = document.getElementById("drop");
@@ -39,19 +37,58 @@ function safeIdFromFilename(name) {
     .replace(/^_+|_+$/g, "") || "structure";
 }
 
+function uuidv4() {
+  return crypto.randomUUID();
+}
+
 function getPreset() {
-  // "scatter_chance" is like 1 in N per chunk attempt (roughly)
+  // scatter_chance: 1 means "super common" (debug), bigger = rarer
   switch (freqPresetEl.value) {
-    case "common": return { chance: 6, iterations: 1 };
+    case "insane":   return { chance: 1, iterations: 10 };
+    case "common":   return { chance: 4, iterations: 2 };
     case "uncommon": return { chance: 16, iterations: 1 };
-    case "rare": return { chance: 35, iterations: 1 };
-    case "very_rare": return { chance: 80, iterations: 1 };
-    default: return { chance: 16, iterations: 1 };
+    case "rare":     return { chance: 40, iterations: 1 };
+    default:         return { chance: 16, iterations: 1 };
   }
 }
 
-function uuidv4() {
-  return crypto.randomUUID();
+function biomeOptions(selected) {
+  const opts = [
+    ["overworld", "Overworld (any)"],
+    ["plains", "Plains"],
+    ["desert", "Desert"],
+    ["forest", "Forest"],
+    ["taiga", "Taiga"],
+    ["snowy_plains", "Snowy Plains"],
+  ];
+  return opts.map(([v, label]) =>
+    `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`
+  ).join("");
+}
+
+function biomeFilter(mode) {
+  switch (mode) {
+    case "plains":
+      return [{ test: "is_biome", operator: "==", value: "minecraft:plains" }];
+    case "desert":
+      return [{ test: "is_biome", operator: "==", value: "minecraft:desert" }];
+    case "forest":
+      return [{ test: "is_biome", operator: "==", value: "minecraft:forest" }];
+    case "taiga":
+      return [{ test: "is_biome", operator: "==", value: "minecraft:taiga" }];
+    case "snowy_plains":
+      return [{ test: "is_biome", operator: "==", value: "minecraft:snowy_plains" }];
+    default:
+      // Most compatible: "overworld" tag
+      return [{ test: "has_biome_tag", operator: "==", value: "overworld" }];
+  }
+}
+
+function yValue(heightMode) {
+  if (heightMode === "fixed80") return 80;
+  if (heightMode === "fixed64") return 64;
+  // surface height:
+  return "query.heightmap(variable.worldx, variable.worldz)";
 }
 
 function render() {
@@ -72,7 +109,7 @@ function render() {
 
       <div class="row" style="margin-top:10px;">
         <div class="col-6">
-          <label>Identifier (used as file name + structure_name)</label>
+          <label>Identifier (becomes structures/&lt;id&gt;.mcstructure)</label>
           <input data-k="id" value="${it.id}" />
         </div>
 
@@ -84,7 +121,7 @@ function render() {
         </div>
 
         <div class="col-4">
-          <label>Frequency: 1 in N chunks (scatter chance)</label>
+          <label>Frequency: 1 in N (scatter chance)</label>
           <input data-k="chance" type="number" min="1" value="${it.chance}" />
         </div>
 
@@ -105,7 +142,7 @@ function render() {
         </div>
 
         <div class="col-6">
-          <label>Height Placement</label>
+          <label>Height placement</label>
           <select data-k="heightMode">
             <option value="surface" ${it.heightMode === "surface" ? "selected" : ""}>Surface (heightmap)</option>
             <option value="fixed64" ${it.heightMode === "fixed64" ? "selected" : ""}>Fixed Y=64</option>
@@ -123,12 +160,13 @@ function render() {
     d.querySelectorAll("input,select").forEach((el) => {
       const k = el.dataset.k;
       if (!k) return;
+
       el.addEventListener("input", () => {
         if (k === "chance") it.chance = Math.max(1, parseInt(el.value || "1", 10));
         else if (k === "iterations") it.iterations = Math.min(10, Math.max(1, parseInt(el.value || "1", 10)));
         else if (k === "id") it.id = safeIdFromFilename(el.value);
         else it[k] = el.value;
-        // update summary pill
+
         d.querySelector("summary .pill").textContent = `id: ${it.id}`;
       });
     });
@@ -143,52 +181,17 @@ function render() {
   }
 }
 
-function biomeOptions(selected) {
-  const opts = [
-    ["overworld", "Overworld (any)"],
-    ["plains", "Plains"],
-    ["desert", "Desert"],
-    ["forest", "Forest"],
-    ["taiga", "Taiga"],
-    ["snowy_plains", "Snowy Plains"],
-  ];
-  return opts.map(([v, label]) =>
-    `<option value="${v}" ${selected === v ? "selected" : ""}>${label}</option>`
-  ).join("");
-}
-
-function biomeFilter(mode) {
-  // You can expand this list later.
-  switch (mode) {
-    case "plains":
-      return [{ test: "is_biome", operator: "==", value: "minecraft:plains" }];
-    case "desert":
-      return [{ test: "is_biome", operator: "==", value: "minecraft:desert" }];
-    case "forest":
-      return [{ test: "is_biome", operator: "==", value: "minecraft:forest" }];
-    case "taiga":
-      return [{ test: "is_biome", operator: "==", value: "minecraft:taiga" }];
-    case "snowy_plains":
-      return [{ test: "is_biome", operator: "==", value: "minecraft:snowy_plains" }];
-    default:
-      return [{ test: "has_biome_tag", operator: "==", value: "overworld" }];
-  }
-}
-
-function yValue(heightMode) {
-  if (heightMode === "fixed80") return 80;
-  if (heightMode === "fixed64") return 64;
-  return "query.heightmap(variable.worldx, variable.worldz)";
-}
+/* ---- Pack generation ---- */
 
 function makeManifest(packName) {
   return {
     format_version: 2,
     header: {
       name: packName,
-      description: "Generated with Structure Spawner Pack Builder",
+      description: "Generated with Structure Worldgen Pack Builder",
       uuid: uuidv4(),
       version: [1, 0, 0],
+      // You can lower this if needed, but 1.20+ is usually safe for modern Bedrock.
       min_engine_version: [1, 20, 0]
     },
     modules: [
@@ -198,9 +201,11 @@ function makeManifest(packName) {
 }
 
 function makeStructureFeature(ns, id, rotation) {
+  // IMPORTANT: structure_template_feature is the correct feature to place .mcstructure files.
+  // structure_name should match the name of the mcstructure you place in /structures (without extension).
   return {
     format_version: "1.13.0",
-    "minecraft:structure_feature": {
+    "minecraft:structure_template_feature": {
       description: { identifier: `${ns}:${id}_feature` },
       structure_name: id,
       adjustment_radius: 8,
@@ -219,7 +224,7 @@ function makeFeatureRule(ns, id, biomeMode, chance, iterations, heightMode) {
       },
       conditions: {
         placement_pass: "surface_pass",
-        "minecraft:biome_filter": biomeFilter(biomeMode) // <-- FIXED (quoted key)
+        "minecraft:biome_filter": biomeFilter(biomeMode)
       },
       distribution: {
         iterations,
@@ -231,6 +236,8 @@ function makeFeatureRule(ns, id, biomeMode, chance, iterations, heightMode) {
     }
   };
 }
+
+/* ---- File adding ---- */
 
 function addFiles(fileList) {
   const preset = getPreset();
@@ -251,11 +258,13 @@ function addFiles(fileList) {
     });
     added++;
   }
+
   render();
   setStatus(added ? `Added ${added} structure(s).` : `No .mcstructure files detected.`, !!added);
 }
 
-/* Drag & drop */
+/* ---- UI events ---- */
+
 drop.addEventListener("dragover", (e) => {
   e.preventDefault();
   drop.classList.add("drag");
@@ -267,7 +276,6 @@ drop.addEventListener("drop", (e) => {
   addFiles(e.dataTransfer.files);
 });
 
-/* File picker */
 fileInput.addEventListener("change", () => addFiles(fileInput.files));
 
 applyDefaultsBtn.addEventListener("click", () => {
@@ -295,30 +303,32 @@ buildBtn.addEventListener("click", async () => {
       return;
     }
 
-    const packName = (packNameEl.value.trim() || "My Structure Spawner Pack");
-    const ns = (namespaceEl.value.trim() || "custom").toLowerCase().replace(/[^a-z0-9_]/g, "_");
+    const packName = (packNameEl.value.trim() || "My Structure Worldgen Pack");
+    const ns = (namespaceEl.value.trim() || "custom")
+      .toLowerCase()
+      .replace(/[^a-z0-9_]/g, "_");
 
     const zip = new JSZip();
 
+    // Correct root files/folders:
     zip.file("manifest.json", JSON.stringify(makeManifest(packName), null, 2));
-
     const structuresFolder = zip.folder("structures");
-    const featuresFolder = zip.folder("worldgen/features");
-    const rulesFolder = zip.folder("worldgen/feature_rules");
+    const featuresFolder = zip.folder("features");
+    const rulesFolder = zip.folder("feature_rules");
 
     for (const it of items) {
       const id = safeIdFromFilename(it.id);
 
-      // structure file
+      // Place the structure as structures/<id>.mcstructure
       const buf = await it.file.arrayBuffer();
       structuresFolder.file(`${id}.mcstructure`, buf);
 
-      // worldgen json
+      // Create matching feature + rule
       featuresFolder.file(`${id}_feature.json`, JSON.stringify(makeStructureFeature(ns, id, it.rotation), null, 2));
-      rulesFolder.file(
-        `${id}_rule.json`,
-        JSON.stringify(makeFeatureRule(ns, id, it.biome, it.chance, it.iterations, it.heightMode), null, 2)
-      );
+      rulesFolder.file(`${id}_rule.json`, JSON.stringify(
+        makeFeatureRule(ns, id, it.biome, it.chance, it.iterations, it.heightMode),
+        null, 2
+      ));
     }
 
     const blob = await zip.generateAsync({ type: "blob" });
@@ -334,13 +344,13 @@ buildBtn.addEventListener("click", async () => {
     a.remove();
     URL.revokeObjectURL(a.href);
 
-    setStatus(`Downloaded ${fname}.`);
+    setStatus(`Downloaded ${fname}. Now import + test in a NEW world/new chunks.`);
   } catch (err) {
     console.error(err);
     setStatus(`Build failed: ${err?.message || err}`, false);
   }
 });
 
-/* initial */
+/* init */
 render();
 setStatus("Ready. Drop .mcstructure files to begin.");
