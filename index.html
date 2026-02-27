@@ -3,17 +3,15 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>Bedrock Structure Spawner Pack Builder</title>
+  <title>Bedrock Structure Worldgen Pack Builder</title>
   <style>
     :root { color-scheme: dark; }
     body { font-family: system-ui, Arial, sans-serif; max-width: 980px; margin: 24px auto; padding: 0 16px; }
     h1 { margin: 0 0 6px; }
     small { color: #a8a8a8; }
+    code { background:#0b0b0b; padding:2px 6px; border:1px solid #222; border-radius:8px; }
     .card { background: #111; border: 1px solid #222; border-radius: 16px; padding: 14px; margin-top: 14px; }
-    .drop {
-      border: 2px dashed #555; border-radius: 16px; padding: 22px; text-align: center;
-      background: #0c0c0c;
-    }
+    .drop { border: 2px dashed #555; border-radius: 16px; padding: 22px; text-align: center; background: #0c0c0c; }
     .drop.drag { border-color: #86f; box-shadow: 0 0 0 3px rgba(136,102,255,.2) inset; }
     .row { display: grid; grid-template-columns: repeat(12, 1fr); gap: 10px; align-items: end; }
     .col-12 { grid-column: span 12; }
@@ -37,24 +35,28 @@
     .danger { color: #ff8a8a; }
     .ok { color: #7dffb2; }
     .actions { display:flex; gap: 10px; flex-wrap: wrap; }
-    .spacer { height: 6px; }
+    .hint { margin-top: 10px; line-height: 1.4; color:#cfcfcf; }
     @media (max-width: 820px) {
       .col-6, .col-4, .col-3 { grid-column: span 12; }
     }
   </style>
 </head>
 <body>
-  <h1>Bedrock Structure Spawner Pack Builder</h1>
-  <small>Drop <code>.mcstructure</code> files → edit spawn rules → download a Behavior Pack (.mcpack or .zip).</small>
+  <h1>Bedrock Structure Worldgen Pack Builder</h1>
+  <small>Drop <code>.mcstructure</code> → set spawn rules → download <code>.mcpack</code> / <code>.zip</code>.</small>
 
   <div class="card">
     <div class="drop" id="drop">
       <div style="font-size: 16px; margin-bottom: 6px;"><b>Drag & drop</b> your <code>.mcstructure</code> files here</div>
       <small>or pick files:</small>
-      <div class="spacer"></div>
+      <div style="height:8px;"></div>
       <input id="fileInput" type="file" multiple accept=".mcstructure" />
     </div>
     <div id="status" style="margin-top:10px;"></div>
+    <div class="hint">
+      Testing tip: worldgen only happens in <b>new chunks</b>. Make a new world or travel far.
+      If your game has an “Experiments” toggle, turn it on for the test world.
+    </div>
   </div>
 
   <div class="card">
@@ -62,7 +64,7 @@
     <div class="row">
       <div class="col-6">
         <label>Pack Name</label>
-        <input id="packName" value="My Structure Spawner Pack" />
+        <input id="packName" value="My Structure Worldgen Pack" />
       </div>
       <div class="col-3">
         <label>Namespace (IDs)</label>
@@ -71,23 +73,23 @@
       <div class="col-3">
         <label>Download As</label>
         <select id="downloadAs">
-          <option value="mcpack" selected>.mcpack (double-click to import)</option>
+          <option value="mcpack" selected>.mcpack (import)</option>
           <option value="zip">.zip (manual install)</option>
         </select>
       </div>
 
       <div class="col-4">
-        <label>Preset Frequency</label>
+        <label>Frequency preset</label>
         <select id="freqPreset">
+          <option value="insane">Insanely common (debug)</option>
           <option value="common">Common</option>
           <option value="uncommon" selected>Uncommon</option>
           <option value="rare">Rare</option>
-          <option value="very_rare">Very Rare</option>
         </select>
       </div>
 
       <div class="col-4">
-        <label>Default Biome Filter</label>
+        <label>Default biome</label>
         <select id="defaultBiome">
           <option value="overworld" selected>Overworld (any)</option>
           <option value="plains">Plains</option>
@@ -99,7 +101,7 @@
       </div>
 
       <div class="col-4">
-        <label>Placement Height</label>
+        <label>Default height</label>
         <select id="defaultHeight">
           <option value="surface" selected>Surface (heightmap)</option>
           <option value="fixed64">Fixed Y=64</option>
@@ -108,7 +110,7 @@
       </div>
 
       <div class="col-12 actions" style="margin-top: 10px;">
-        <button id="applyDefaultsBtn">Apply defaults to all structures</button>
+        <button id="applyDefaultsBtn">Apply defaults to all</button>
         <button id="clearBtn" class="danger">Clear list</button>
         <button id="buildBtn">Build & Download</button>
       </div>
@@ -121,7 +123,6 @@
     <div class="list" id="structuresList"></div>
   </div>
 
-  <!-- JSZip CDN -->
   <script src="https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js"></script>
   <script src="app.js"></script>
 </body>
